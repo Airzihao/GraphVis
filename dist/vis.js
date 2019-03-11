@@ -5,7 +5,7 @@
  * A dynamic, browser-based visualization library.
  *
  * @version 4.21.0
- * @date    2019-03-10
+ * @date    2019-03-11
  *
  * @license
  * Copyright (C) 2011-2017 Almende B.V, http://almende.com
@@ -28733,7 +28733,7 @@ var allOptions = {
     },
     maxVelocity: { number: number },
     minVelocity: { number: number }, // px/s
-    solver: { string: ['barnesHut', 'repulsion', 'hierarchicalRepulsion', 'forceAtlas2Based'] },
+    solver: { string: ['barnesHut', 'repulsion', 'hierarchicalRepulsion', 'forceAtlas2Based', 'communityRepulsion'] },
     stabilization: {
       enabled: { boolean: bool },
       iterations: { number: number }, // maximum number of iteration to stabilize
@@ -49015,7 +49015,7 @@ var PhysicsEngine = function () {
         nodeDistance: 120,
         damping: 0.09
       },
-      conmmunityRepulsion: {
+      communityRepulsion: {
         centralGravity: 0.05,
         springLength: 20,
         springConstant: 0.01,
@@ -49024,7 +49024,7 @@ var PhysicsEngine = function () {
       },
       maxVelocity: 50,
       minVelocity: 0.75, // px/s
-      solver: 'barnesHut',
+      solver: 'communityRepulsion',
       stabilization: {
         enabled: true,
         iterations: 1000, // maximum number of iteration to stabilize
@@ -49153,7 +49153,7 @@ var PhysicsEngine = function () {
         this.edgesSolver = new HierarchicalSpringSolver(this.body, this.physicsBody, options);
         this.gravitySolver = new CentralGravitySolver(this.body, this.physicsBody, options);
       } else if (this.options.solver === 'communityRepulsion') {
-        options = this.options.repulsion;
+        options = this.options.communityRepulsion;
         this.nodesSolver = new CommunityRepulsionSolver(this.body, this.physicsBody, options);
         this.edgesSolver = new CommunitySpringSolver(this.body, this.physicsBody, options);
         this.gravitySolver = new CentralGravitySolver(this.body, this.physicsBody, options);
