@@ -7425,6 +7425,7 @@ var Node = function () {
   function Node(options, body, imagelist, grouplist, globalOptions, defaultOptions) {
     (0, _classCallCheck3['default'])(this, Node);
 
+
     this.options = util.bridgeObject(globalOptions);
     this.globalOptions = globalOptions;
     this.defaultOptions = defaultOptions;
@@ -8034,6 +8035,7 @@ var Node = function () {
         util.fillIfDefined(parentOptions.color, parsedColor);
       } else if (allowDeletion === true && newOptions.color === null) {
         parentOptions.color = util.bridgeObject(globalOptions.color); // set the object back to the global options
+        //parentOptions.color = util.bridgeObject(this.defaultOptions.color);
       }
 
       // handle the fixed options
@@ -42594,6 +42596,7 @@ function Network(container, data, options) {
     nodeIndices: [],
     edges: {},
     edgeIndices: [],
+    groups: {},
 
     emitter: {
       on: this.on.bind(this),
@@ -42617,7 +42620,8 @@ function Network(container, data, options) {
     },
     data: {
       nodes: null, // A DataSet or DataView
-      edges: null // A DataSet or DataView
+      edges: null, // A DataSet or DataView
+      groups: null
     },
     functions: {
       createNode: function createNode() {},
@@ -42643,7 +42647,7 @@ function Network(container, data, options) {
   this.selectionHandler = new SelectionHandler(this.body, this.canvas); // Selection handler
   this.interactionHandler = new InteractionHandler(this.body, this.canvas, this.selectionHandler); // Interaction handler handles all the hammer bindings (that are bound by canvas), key
   this.view = new View(this.body, this.canvas); // camera handler, does animations and zooms
-  this.renderer = new CanvasRenderer(this.body, this.canvas); // renderer, starts renderloop, has events that modules can hook into
+  this.renderer = new CanvasRenderer(this.body, this.canvas, this.groups); // renderer, starts renderloop, has events that modules can hook into
   this.physics = new PhysicsEngine(this.body); // physics engine, does all the simulations
   this.layoutEngine = new LayoutEngine(this.body); // layout engine for inital layout and hierarchical layout
   this.clustering = new ClusterEngine(this.body); // clustering api
@@ -43809,6 +43813,7 @@ var Groups = function () {
     this.defaultIndex = 0;
     this.groupsArray = [];
     this.groupIndex = 0;
+    this.outLinePoints = [[[]]];
 
     this.defaultGroups = [{ border: "#2B7CE9", background: "#97C2FC", highlight: { border: "#2B7CE9", background: "#D2E5FF" }, hover: { border: "#2B7CE9", background: "#D2E5FF" } }, // 0: blue
     { border: "#FFA500", background: "#FFFF00", highlight: { border: "#FFA500", background: "#FFFFA3" }, hover: { border: "#FFA500", background: "#FFFFA3" } }, // 1: yellow
@@ -52579,13 +52584,15 @@ var CanvasRenderer = function () {
   /**
    * @param {Object} body
    * @param {Canvas} canvas
+   * @param {Object} groups
    */
-  function CanvasRenderer(body, canvas) {
+  function CanvasRenderer(body, canvas, groups) {
     (0, _classCallCheck3["default"])(this, CanvasRenderer);
 
     _initRequestAnimationFrame();
     this.body = body;
     this.canvas = canvas;
+    this.groups = groups;
 
     this.redrawRequested = false;
     this.renderTimer = undefined;
@@ -52834,7 +52841,7 @@ var CanvasRenderer = function () {
         this.body.emitter.emit("beforeDrawing", ctx);
         ctx.closePath();
 
-        //this._drawZones(ctx)
+        this._drawZones(this.canvas, ctx);
         if (hidden === false) {
           if (this.dragging === false || this.dragging === true && this.options.hideEdgesOnDrag === false) {
             this._drawEdges(ctx);
@@ -52888,7 +52895,7 @@ var CanvasRenderer = function () {
     //     //ctx.globalAlpha=0.2||alpha;
     //     ctx.fill();
     //     ctx.restore();
-    // }
+    //   }
     // function pathZone(ctx, nodeList){
     //     ctx.beginPath();
     //     ctx.moveTo(nodeList[0][0],nodeList[0][1]);
@@ -52904,6 +52911,48 @@ var CanvasRenderer = function () {
     // }
     // }
 
+  }, {
+    key: "_drawZones",
+    value: function _drawZones(canvas, ctx) {
+      var nodeList = [[[]]];
+
+      var groupSet = this.groups.groups;
+      var i = 0;
+      for (var item in groupSet) {
+        var temp = groupSet[item];
+        nodeList[i] = temp.outlinePoints;
+        i++;
+      }
+
+      var colorList = ['rgba(135,206,250,0.2)', 'rgba(255,192,203,0.2)', 'rgba(230,230,250,0.5)', 'rgba(	100,149,237,0.2)', 'rgba(135,206,250,0.2)', 'rgba(127,255,170,0.2)', 'rgba(255,255,224,0.4)', 'rgba(255,228,181,0.2)', 'rgba(255,218,185,0.2)', 'rgba(250,128,114,0.2)', 'rgba(178,34,34,0.2)'];
+      for (var _i = 0; _i < nodeList.length; _i++) {
+        fillZone(ctx, nodeList[_i], colorList[_i]);
+      }
+
+      function fillZone(ctx, nodeList, fillColor, alpha) {
+
+        if (nodeList !== undefined) {
+          ctx.save();
+          pathZone(ctx, nodeList);
+          ctx.fillStyle = fillColor || 'rgba(135,206,250,0.2)';
+          //ctx.globalAlpha=0.2||alpha;
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      function pathZone(ctx, nodeList) {
+        ctx.beginPath();
+        ctx.moveTo(nodeList[0][0], nodeList[0][1]);
+        for (var _i2 = 1; _i2 < nodeList.length - 1; _i2++) {
+          var node0 = nodeList[_i2];
+          var node1 = nodeList[_i2 + 1];
+          ctx.quadraticCurveTo(node0[0], node0[1], (node0[0] + node1[0]) / 2, (node0[1] + node1[1]) / 2);
+        }
+        //ctx.quadraticCurveTo((nodeList[0][0]+nodeList[nodeList.length-1][1])/2,(nodeList[0][1]+nodeList[nodeList.length-1][1])/2,nodeList[0][0],nodeList[0][1])
+        ctx.lineTo(nodeList[nodeList.length - 1][0], nodeList[nodeList.length - 1][1]);
+        ctx.closePath();
+      }
+    }
 
     /**
      * Redraw all nodes
@@ -52983,8 +53032,8 @@ var CanvasRenderer = function () {
       }
 
       // draw the selected nodes on top
-      for (var _i = 0; _i < selected.length; _i++) {
-        node = nodes[selected[_i]];
+      for (var _i3 = 0; _i3 < selected.length; _i3++) {
+        node = nodes[selected[_i3]];
         node.draw(ctx);
       }
     }
